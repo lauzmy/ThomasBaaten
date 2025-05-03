@@ -204,4 +204,4 @@ def update_graphs(selected_file, selected_color, ts_click_data, map_click_data, 
 
 # Run the app
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
