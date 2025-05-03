@@ -10,6 +10,7 @@ class SerialController:
     """
 
     def __init__(self, port, baudrate=115200):
+        """Initialize the SerialController with the given port and baudrate."""
         self.arduino = serial.Serial(port=port, baudrate=baudrate, timeout=1)
         self.running = True
         self.latest = {}  # Store latest values as a dict
@@ -18,6 +19,7 @@ class SerialController:
         self.thread.start()
 
     def _read_serial(self):
+        """Continuously read from the serial port and update the latest telemetry values."""
         while self.running and self.arduino.is_open:
             if self.arduino.in_waiting > 0:
                 line = self.arduino.readline().decode("utf-8", errors="ignore").strip()
@@ -38,10 +40,12 @@ class SerialController:
             return self.latest.copy()
 
     def send_command(self, command):
+        """Send a command to the Arduino."""
         if self.arduino.is_open:
             self.arduino.write(f"{command}\n".encode("utf-8"))
 
     def close(self):
+        """Close the serial connection."""
         self.running = False
         if self.arduino.is_open:
             self.arduino.close()
