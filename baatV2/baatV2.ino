@@ -15,8 +15,12 @@ byte senderAddress = 0xC4; // Expected sender address
 // current sensor setup
 const int i1Pin = A2;
 const int i2Pin = A3;
-float offset1;
-float offset2;
+float offset1 = -2.25;
+float offset2 = -3;
+
+const int numReadings = 100;
+float readingsC1[numReadings] = {0}; // the readings from the current1 sensor
+float readingsC2[numReadings] = {0}; // the readings from the current1 sensor
 
 // GPS setup
 Adafruit_GPS GPS(&Serial3);
@@ -81,16 +85,36 @@ void updateMotorState()
   digitalWrite(INA2, M2A);
   digitalWrite(INB2, M2B);
 }
+
+// Returns the average of a float array
+float averageReading(float arr[], int size) {
+    float sum = 0.0;
+    for (int i = 0; i < size; i++) {
+        sum += arr[i];
+    }
+    return sum / size;
+}
+
+// Shift all values left and append new value at the end
+void pushReading(float arr[], int size, float newValue) {
+    for (int i = 1; i < size; i++) {
+        arr[i - 1] = arr[i];
+    }
+    arr[size - 1] = newValue;
+}
+
 /**
- * @brief Reads the raw current from the sensor and converts it to amps.
+ * @brief Reads the raw current from the sensor and updates the rolling buffer.
  * @param pin The analog pin to read from
  * @param offset The offset voltage to subtract
- * @return The current in amps
+ * @param readings The array to store the readings
+ * @param numReadings The number of readings to keep in the array
  */
-float readRawCurrent(int pin, float offset)
+void readRawCurrent(int pin, float offset, float readings[], int numReadings)
 {
-  float v = analogRead(pin) * 5.0 / 1023.0;
-  return (v - offset) / 0.04; // bruk sensorens 40 mV/A
+  float v = (analogRead(pin) - 512) * 5.0 / 1023.0;
+  float current = (v / 0.04) - offset; // bruk sensorens 40 mV/A
+  pushReading(readings, numReadings, current);
 }
 
 /**
@@ -116,7 +140,7 @@ void onReceive(int packetSize)
     return;
   }
 
-  if (payloadLength == sizeof(received))
+  if (payloadLength == sizeof(MotorState))
   { // check if payload length matches expected size
     // Read payload into struct
     MotorState received;
@@ -212,8 +236,8 @@ void respondToSender(uint8_t sender)
   Data.Latitude = getLatitude();
   Data.Longitude = getLongitude();
   Data.heading = getHeading();
-  Data.current1 = readRawCurrent(i1Pin, offset1);
-  Data.current2 = readRawCurrent(i2Pin, offset2);
+  Data.current1 = -averageReading(readingsC1, numReadings);
+  Data.current2 = averageReading(readingsC2, numReadings);
   Data.temperature = getTemperature();
   Data.speed = getSpeed();
 
@@ -297,10 +321,6 @@ void setup()
   bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED, reportIntervalUs);
   bno08x.enableReport(SH2_LINEAR_ACCELERATION, reportIntervalUs);
 
-  // calibrrate current sensor offsets
-  offset1 = readRawCurrent(i1Pin, 0) * 0.04;
-  offset2 = readRawCurrent(i2Pin, 0) * 0.04;
-
   // intialize GPS
   Serial3.begin(9600);
   GPS.begin(9600);
@@ -342,6 +362,9 @@ void loop()
   }
 
   pollIMU(); // poll IMU for heading and speed
+
+  readRawCurrent(i1Pin, offset1, readingsC1, numReadings);
+  readRawCurrent(i2Pin, offset2, readingsC2, numReadings);
 
   onReceive(LoRa.parsePacket()); // check for incoming LoRa packets
   updateMotorState();            // update motor state based on received data
