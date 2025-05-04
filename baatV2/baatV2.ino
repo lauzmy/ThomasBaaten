@@ -13,12 +13,12 @@ byte localAddress = 0x37;  // Receiver address
 byte senderAddress = 0xC4; // Expected sender address
 
 // current sensor setup
-const int i1Pin = A2;
+const int i1Pin = A11;
 const int i2Pin = A3;
-float offset1 = -2.25;
-float offset2 = -3;
+float offset1;
+float offset2;
 
-const int numReadings = 100;
+const int numReadings = 50;
 float readingsC1[numReadings] = {0}; // the readings from the current1 sensor
 float readingsC2[numReadings] = {0}; // the readings from the current1 sensor
 
@@ -236,7 +236,7 @@ void respondToSender(uint8_t sender)
   Data.Latitude = getLatitude();
   Data.Longitude = getLongitude();
   Data.heading = getHeading();
-  Data.current1 = -averageReading(readingsC1, numReadings);
+  Data.current1 = averageReading(readingsC1, numReadings);
   Data.current2 = averageReading(readingsC2, numReadings);
   Data.temperature = getTemperature();
   Data.speed = getSpeed();
@@ -329,6 +329,15 @@ void setup()
 
   delay(1000);
   Serial3.println(PMTK_Q_RELEASE); // Request firmware version
+
+  // initialize current sensor offsets
+  for (int i = 0; i < numReadings; i++)
+  {
+    readRawCurrent(i1Pin, 0, readingsC1, numReadings);
+    readRawCurrent(i2Pin, 0, readingsC2, numReadings);
+  }
+  offset1 = averageReading(readingsC1, numReadings) +1; // This is the average voltage at zero current
+  offset2 = averageReading(readingsC2, numReadings) +1;
 }
 
 /**
