@@ -6,7 +6,7 @@ from plotly.subplots import make_subplots
 from dash import Dash, dcc, html, Input, Output, State
 
 # Get the list of files in the data folder
-data_folder = r'ThomasBaaten\data'
+data_folder = r'data'
 data_files = [f for f in os.listdir(data_folder) if f.endswith('.csv')]
 
 # Initialize the Dash app
