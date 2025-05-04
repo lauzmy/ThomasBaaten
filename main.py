@@ -563,6 +563,7 @@ def animate():
                 color=CHART_COLORS["current2"],
                 linewidth=2,
             )
+        ax.set_ylim(-5, 5)
         ax.legend(fontsize=8, loc="lower left")
         ax.grid(True, linestyle="--", alpha=0.7)
         ax.set_title("Motor Currents (A)", fontsize=12)
